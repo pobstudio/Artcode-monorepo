@@ -1,0 +1,8 @@
+{
+  "extends": "../tsconfig",
+  "compilerOptions": {
+    "outDir": "lib",
+    "rootDir": "."
+  },
+  "include": ["./src/**/*", "./src/data/colors.json", "./src/data/theme.json"]
+}

@@ -1,0 +1,16 @@
+{
+  "name": "@pob-monorepo/scripts",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "sample": "yarn ts-node --project ./tsconfig.json src/sample"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@pob-monorepo/protocol": "1.0.0",
+    "dotenv": "^8.2.0",
+    "ethers": "^5.0.29",
+    "isomorphic-fetch": "^3.0.0"
+  }
+}

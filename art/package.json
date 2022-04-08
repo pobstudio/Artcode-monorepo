@@ -1,0 +1,18 @@
+{
+  "name": "@pob-monorepo/art",
+  "version": "1.0.0",
+  "source": "./src/index.html",
+  "license": "MIT",
+  "scripts": {
+    "start": "parcel",
+    "build": "parcel build"
+  },
+  "dependencies": {
+    "@artkit/connect": "^0.0.4",
+    "p5": "^1.4.1"
+  },
+  "devDependencies": {
+    "@types/p5": "^1.4.2",
+    "parcel": "^2.4.1"
+  }
+}

@@ -6,10 +6,11 @@ let hash = tokenData.hash ?? '0';
 let projectNumber = Math.floor(parseInt(tokenData.tokenId) / 1000000);
 let mintNumber = parseInt(tokenData.tokenId) % 1000000;
 
+console.log('hash', hash)
 const getDimension = () => Math.min(windowWidth, windowHeight);
 
 class Random {
-  constructor() {
+  constructor(hash) {
     this.useA = false;
     let sfc32 = function (uint128Hex) {
       let a = parseInt(uint128Hex.substr(0, 8), 16);
@@ -28,9 +29,9 @@ class Random {
       };
     };
     // seed prngA with first half of tokenData.hash
-    this.prngA = new sfc32(tokenData.hash.substr(2, 32));
+    this.prngA = new sfc32(hash.substr(2, 32));
     // seed prngB with second half of tokenData.hash
-    this.prngB = new sfc32(tokenData.hash.substr(34, 32));
+    this.prngB = new sfc32(hash.substr(34, 32));
     for (let i = 0; i < 1e6; i += 2) {
       this.prngA();
       this.prngB();
@@ -60,28 +61,212 @@ class Random {
   }
 }
 
-const random = new Random();
+const random = new Random(hash);
+
+const PATTERN_WEIGHTS = [[0, 0.2, 0.4, 0.8, 1], [0, 0.25, 0.5, 0.75, 1], [0, 0.4, 0.8, 0.9, 1], [0, 0.9, 1]];
+
+const COLORS = [
+  ["#f5eee6", "#f3d7ca", "#e6a4b4", "#c86b85"],
+  ["#7effdb", "#b693fe", "#8c82fc", "#ff9de2"],
+  ["#dff4f3", "#dde7f2", "#b9bbdf", "#878ecd"],
+  ["#303841", "#3a4750", "#d72323", "#eeeeee"],
+  ["#ebfffa", "#c6fce5", "#6ef3d6", "#0dceda"],
+  ["#99e1e5", "#f3e8cb", "#f2c6b4", "#fbafaf"],
+  ["#0c056d", "#590d82", "#b61aae", "#f25d9c"],
+  ["#155263", "#ff6f3c", "#ff9a3c", "#ffc93c"],
+  ["#fafafa", "#e8f1f5", "#005691", "#004a7c"],
+  ["#15b7b9", "#10ddc2", "#f5f5f5", "#f57170"],
+  ["#f4eeff", "#dcd6f7", "#a6b1e1", "#424874"],
+  ["#cefff1", "#ace7ef", "#a6acec", "#a56cc1"],
+  ["#fb929e", "#ffdfdf", "#fff6f6", "#aedefc"],
+  ["#a9eee6", "#fefaec", "#f9a1bc", "#625772"],
+  ["#fbf0f0", "#dfd3d3", "#b8b0b0", "#7c7575"],
+  ["#071a52", "#086972", "#17b978", "#a7ff83"],
+  ["#283149", "#404b69", "#f73859", "#dbedf3"],
+  ["#393232", "#4d4545", "#8d6262", "#ed8d8d"],
+  ["#ff6464", "#ff8264", "#ffaa64", "#fff5a5"],
+  ["#f8b595", "#f67280", "#c06c84", "#6c5b7c"],
+  ["#303a52", "#574b90", "#9e579d", "#fc85ae"],
+  ["#fef0ff", "#d6c8ff", "#c79ecf", "#7e6bc4"],
+  ["#66bfbf", "#eaf6f6", "#fcfefe", "#f76b8a"],
+  ["#f6f6f6", "#d6e4f0", "#1e56a0", "#163172"],
+  ["#00204a", "#005792", "#00bbf0", "#d9faff"],
+  ["#11cbd7", "#c6f1e7", "#f0fff3", "#fa4659"],
+  ["#a9eee6", "#fefaec", "#f38181", "#625772"],
+  ["#f9ecec", "#f0d9da", "#c8d9eb", "#ecf2f9"],
+  ["#35477d", "#6c5b7b", "#c06c84", "#f67280"],
+  ["#232931", "#393e46", "#4ecca3", "#eeeeee"],
+  ["#142850", "#27496d", "#0c7b93", "#00a8cc"],
+  ["#27296d", "#5e63b6", "#a393eb", "#f5c7f7"],
+  ["#3a0088", "#930077", "#e61c5d", "#ffbd39"],
+  ["#ffb6b6", "#fde2e2", "#aacfcf", "#679b9b"],
+  ["#142850", "#27496d", "#00909e", "#dae1e7"],
+  ["#ffe8df", "#ffffff", "#f0f0f0", "#888888"],
+  ["#fcefee", "#fccde2", "#fc5c9c", "#c5e3f6"],
+  ["#e0fcff", "#90f2ff", "#6eb6ff", "#7098da"],
+  ["#a6e4e7", "#f9f9f9", "#ebcbae", "#8f8787"],
+  ["#233142", "#455d7a", "#f95959", "#e3e3e3"],
+  ["#c7f3ff", "#fdc7ff", "#ffdcf5", "#f2f4c3"],
+  ["#ffb6b9", "#fae3d9", "#bbded6", "#8ac6d1"],
+  ["#e7e6e1", "#f7f6e7", "#c1c0b9", "#537791"],
+  ["#fffcca", "#55e9bc", "#11d3bc", "#537780"],
+  ["#272343", "#ffffff", "#e3f6f5", "#bae8e8"],
+  ["#ffa5a5", "#ffffc2", "#c8e7ed", "#bfcfff"],
+  ["#253b6e", "#1f5f8b", "#1891ac", "#d2ecf9"],
+  ["#f2f2f2", "#ebd5d5", "#ea8a8a", "#685454"],
+  ["#eaafaf", "#a2738c", "#645c84", "#427996"],
+  ["#fcf5ee", "#fbe8e7", "#f7ddde", "#ffc4d0"],
+  ["#4d606e", "#3fbac2", "#d3d4d8", "#f5f5f5"],
+  ["#ffbbcc", "#ffcccc", "#ffddcc", "#ffeecc"],
+  ["#9ddcdc", "#fff4e1", "#ffebb7", "#e67a7a"],
+  ["#7d5a5a", "#f1d1d1", "#f3e1e1", "#faf2f2"],
+  ["#ffd9e8", "#de95ba", "#7f4a88", "#4a266a"],
+  ["#f0ece2", "#dfd3c3", "#c7b198", "#596e79"],
+  ["#f47c7c", "#f7f48b", "#a1de93", "#70a1d7"],
+  ["#c8f4de", "#a4e5d9", "#66c6ba", "#649dad"],
+  ["#0e3150", "#6dc9c8", "#ffc0c2", "#f7e9e3"],
+  ["#c7f5fe", "#fcc8f8", "#eab4f8", "#f3f798"],
+  ["#e3d9ca", "#95a792", "#596c68", "#403f48"],
+  ["#2a363b", "#e84a5f", "#ff847b", "#fecea8"],
+  ["#f4f7f7", "#aacfd0", "#79a8a9", "#1f4e5f"],
+  ["#700961", "#b80d57", "#e03e36", "#ff7c38"],
+  ["#e4eddb", "#307672", "#144d53", "#1a3c40"],
+  ["#a7efe9", "#7fdfd4", "#fbe1b6", "#fbac91"],
+  ["#f5efe3", "#e6e7e5", "#f7d3ba", "#a6aa9c"],
+  ["#e1f2fb", "#f1f9f9", "#f3dfe3", "#e9b2bc"],
+  ["#f8b195", "#f67280", "#c06c84", "#355c7d"],
+  ["#ffd5e5", "#ffffdd", "#a0ffe6", "#81f5ff"],
+  ["#fbfbfb", "#b9e1dc", "#f38181", "#756c83"],
+  ["#adf7d1", "#95e8d7", "#7dace4", "#8971d0"],
+  ["#dff5f2", "#87dfd6", "#46b7b9", "#2f9296"],
+  ["#beebe9", "#f4dada", "#ffb6b9", "#f6eec7"],
+  ["#222831", "#393e46", "#00adb5", "#00fff5"],
+  ["#39065a", "#6a0572", "#9a0f98", "#ea0599"],
+  ["#f4f9f4", "#c4e3cb", "#8aae92", "#616161"],
+  ["#a1d9ff", "#ca82f8", "#ed93cb", "#f2bbbb"],
+  ["#fa4659", "#feffe4", "#a3de83", "#2eb872"],
+  ["#ffb400", "#fffbe0", "#2994b2", "#474744"],
+  ["#6b0848", "#a40a3c", "#ec610a", "#ffc300"],
+  ["#f12b6b", "#ff467e", "#fd94b4", "#f6c7c7"],
+  ["#333333", "#ffffff", "#e1f4f3", "#706c61"],
+  ["#363062", "#4d4c7d", "#827397", "#d8b9c3"],
+  ["#f3f8ff", "#deecff", "#c6cfff", "#e8d3ff"],
+  ["#be9fe1", "#c9b6e4", "#e1ccec", "#f1f1f6"],
+  ["#e8e8e8", "#5588a3", "#145374", "#00334e"],
+  ["#45eba5", "#21aba5", "#1d566e", "#163a5f"],
+  ["#beebe9", "#fffdf9", "#ffe3ed", "#8ac6d1"],
+  ["#f2e9d0", "#eaceb4", "#e79e85", "#bb5a5a"],
+  ["#e4fffe", "#a4f6f9", "#ff99fe", "#ba52ed"],
+  ["#fafaf6", "#00fff0", "#00d1ff", "#3d6cb9"],
+  ["#fda403", "#e8751a", "#c51350", "#8a1253"],
+  ["#f6f5f5", "#e3e3e3", "#3bb4c1", "#048998"],
+  ["#f4f7f7", "#aacfd0", "#5da0a2", "#34495e"],
+  ["#3498db", "#ecf0f1", "#34495e", "#f1c40f"],
+  ["#dddddd", "#fab7b7", "#f5a8a8", "#e19999"],
+  ["#0f1021", "#d01257", "#fb90b7", "#ffcee4"],
+  ["#f69d9d", "#ffeab6", "#fdffba", "#c0ffc2"],
+  ["#ffdede", "#f7f3ce", "#c5ecbe", "#4797b1"],
+  ["#120136", "#035aa6", "#40bad5", "#fcbf1e"],
+]
+
+/**
+ * PATTERNS
+ */
+const PATTERNS = {
+  color: (index=1) => {
+    return (ox, oy, w, h) => {
+      fill(gene.pallete[index])
+      rect(ox, oy, w, h);
+    }
+  },
+  color_2: (index=1) => (ox, oy, w, h) => {
+    PATTERNS.color(2)(ox, oy, w, h)
+  },
+  plain: () => (ox, oy, w, h) => {
+    rect(ox, oy, w, h);
+  },
+  horzStripes: (gap=random.random_int(3, 9)) => (ox, oy, w, h) => {
+    stroke('black');
+    const coeff = h > 0 ? 1 : -1;
+    for (let i = 0; i < Math.abs(h); i += gap) {
+      line(ox, oy + coeff * i, ox + w, oy + coeff * i);
+    }
+  },
+  vertStripes: (gap=random.random_int(3, 9)) => (ox, oy, w, h) => {
+    stroke('black');
+    const coeff = w > 0 ? 1 : -1;
+    for (let i = 0; i < Math.abs(w); i += gap) {
+      line(ox + coeff * i, oy, ox + coeff * i, oy + h);
+    }
+  },
+  grid: (gap=random.random_int(3, 9)) => (ox, oy, w, h) => {
+    PATTERNS.horzStripes(gap)(ox, oy, w, h)
+    PATTERNS.vertStripes(gap)(ox, oy, w, h)
+  },
+  diagonalUp: (gap=random.random_int(3, 9)) => (ox, oy, w, h) => {
+    push()
+    fill('rgba(0,0,0,0)');
+    rect(ox, oy, w, h);
+    drawingContext.clip();
+    const normTopLeft = [w > 0 ? ox : ox + w, h > 0 ? oy : oy + h];
+    const normDimensions = [abs(w), abs(h)];
+    const maxDimension = Math.max(...normDimensions)
+    for (let i = -normDimensions[0]; i < normDimensions[0] + normDimensions[1]; i += gap) {
+      line(normTopLeft[0], normTopLeft[1] + i, normTopLeft[0] + maxDimension, normTopLeft[1] + i + maxDimension)
+    }
+    pop()
+  },
+  diagonalDown: (gap=random.random_int(3, 9)) => (ox, oy, w, h) => {
+    push()
+    fill('rgba(0,0,0,0)');
+    rect(ox, oy, w, h);
+    drawingContext.clip();
+    const normTopLeft = [w > 0 ? ox : ox + w, h > 0 ? oy : oy + h];
+    const normDimensions = [abs(w), abs(h)];
+    const maxDimension = Math.max(...normDimensions)
+    for (let i = -normDimensions[0]; i < normDimensions[0] + normDimensions[1]; i += gap) {
+      line(normTopLeft[0], normTopLeft[1] + i, normTopLeft[0] + maxDimension, normTopLeft[1] + i - maxDimension)
+    }
+    pop()
+  },
+  diagonalGrid: (gap=random.random_int(3, 9)) => (ox, oy, w, h) => {
+    PATTERNS.diagonalUp(gap)(ox, oy, w, h)
+    PATTERNS.diagonalDown(gap)(ox, oy, w, h)
+  },
+  crossHatchDown: (gap=random.random_int(3, 9)) => (ox, oy, w, h) => {
+    PATTERNS.horzStripes(gap)(ox, oy, w, h)
+    PATTERNS.vertStripes(gap)(ox, oy, w, h)
+    // PATTERNS.diagonalUp(ox, oy, w, h)
+    PATTERNS.diagonalDown(gap)(ox, oy, w, h)
+  },
+  crossHatchUp: (gap=random.random_int(3, 9)) => (ox, oy, w, h) => {
+    PATTERNS.horzStripes(gap)(ox, oy, w, h)
+    PATTERNS.vertStripes(gap)(ox, oy, w, h)
+    PATTERNS.diagonalUp(gap)(ox, oy, w, h)
+  }
+};
 
 const generateGene = (seed) => {
-  // const randSrc = seedrandom(seed);
-  // const {
-  //   randomByWeights,
-  //   random,
-  //   randomInArrayByWeights,
-  //   randomInArray
-  // } = randomRangeFactory(randSrc);
+
+  const patternWeights = random.random_choice(PATTERN_WEIGHTS);
   // const pallete = randomInArray(colors);
+  const pallete = random.random_choice(COLORS);
+  console.log(pallete)
   return {
     seed,
-    pallete: ['#005555', '#069A8E', '#A1E3D8', '#F7FF93'],
+    pallete,
+    patternWeights: patternWeights,
+    patterns: patternWeights.map((_, i) => PATTERNS[i === 0 ? 'color' : random.random_choice(Object.keys(PATTERNS))]()),
     gridLinesToRects: {
-      gitter: [-1, 0],
+      gitter: [random.random_int(-6, 6), random.random_int(-6, 6)],
     },
     gridPartitioning: {
+      driftIndex: [random.random_choice([0, 1]), random.random_choice([0, 1])],
+      driftCoefficient: [random.random_num(-0.1, 0.1), random.random_num(-0.1, 0.1)],
       margin: 60,
-      gap: 5,
+      gap: random.random_int(0, 20),
       // unitSize: [50, 50],
-      gridSizeInUnits: [40, 40],
+      gridSizeInUnits: random.random_choice([[60, 60], [80, 80], [100, 100], [120, 120], [140, 140]]),
     },
   }
 }
@@ -213,9 +398,9 @@ const convertGridLinesToRects = (
     });
 };
 
-
 const gene = generateGene(hash);
 
+console.log(gene)
 function setup() {
   const dimension = getDimension();
   createCanvas(dimension, dimension);
@@ -229,24 +414,45 @@ function windowResized() {
 }
 
 function draw() {
-  const { gitter } = gene.gridLinesToRects;
-  const { gridSizeInUnits, margin} = gene.gridPartitioning;
+  const { pallete, patterns, patternWeights } = gene;
+  const { gridSizeInUnits, margin, driftCoefficient, driftIndex } = gene.gridPartitioning;
   const dimension = getDimension();
-  const pallete = gene.pallete;
   const lines = generateGridPartitioningInGridUnits(
     [0, 0],
     [gridSizeInUnits[0] - 1, gridSizeInUnits[1] - 1],
   );
   const rects = convertGridLinesToRects(lines);
+  // draw background
   background(pallete[0]);
+  // draw rectangles
   for (let i = 0; i < rects.length; ++i) {
     const r = rects[i];
-    const l = lines[i]; 
-    rect(...r[0], ...[r[1][0] - r[0][0], r[1][1] - r[0][1]]);
+    resetMatrix();
+    const translateDelta = [r[0][0] + (r[1][0] - r[0][0] / 2), r[0][1] + (r[1][1] - r[0][1] / 2)]
+    push();
+    translate(translateDelta[0] + translateDelta[driftIndex[0]] * driftCoefficient[0], translateDelta[1] + translateDelta[driftIndex[1]] * driftCoefficient[1]);
+    const rectParams = [-(r[1][0] - r[0][0] / 2), -(r[1][1] - r[0][1] / 2), r[1][0] - r[0][0], r[1][1] - r[0][1]]
+    // const rectParams = [...r[0], r[1][0] - r[0][0], r[1][1] - r[0][1]]
+    // apply patterns
+    const rawRatio = Math.abs(rectParams[2] / rectParams[3]);
+    const ratio = (rawRatio > 1 ? 0.5 * (1 - (1 / rawRatio)) + 0.5 : 0.5 * rawRatio);
+    let patternIndex = 0;
+    if (!(rectParams[2] === 0 && rectParams[3] === 0)) {
+      for(; patternIndex < patternWeights.length; ++patternIndex) {
+        if (ratio >= patternWeights[patternIndex] && ratio <= (patternWeights[patternIndex + 1] ?? 1)) {
+          break;
+        }
+      }
+    }
+    const pattern = patterns[patternIndex];
+    PATTERNS.plain()(...rectParams);
+    pattern(...rectParams);
+    pop();
   }
   // draw the frame
+  resetMatrix();
   strokeWeight(margin * 2);
-  stroke(pallete[2]);
+  stroke(pallete[3]);
   fill('rgba(0,0,0,0)');
   rect(0,0, dimension, dimension);
   strokeWeight(1);

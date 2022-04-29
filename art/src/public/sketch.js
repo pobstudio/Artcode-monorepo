@@ -251,22 +251,23 @@ const generateGene = (seed) => {
   const patternWeights = random.random_choice(PATTERN_WEIGHTS);
   // const pallete = randomInArray(colors);
   const pallete = random.random_choice(COLORS);
-  console.log(pallete)
+  const shuffledPalleteIndex = random.random_int(0, pallete.length - 1);
+  const shuffledPallete = [...pallete.slice(shuffledPalleteIndex), ...pallete.slice(0, shuffledPalleteIndex)]
   return {
     seed,
-    pallete,
+    pallete: shuffledPallete,
     patternWeights: patternWeights,
     patterns: patternWeights.map((_, i) => PATTERNS[i === 0 ? 'color' : random.random_choice(Object.keys(PATTERNS))]()),
     gridLinesToRects: {
-      gitter: [random.random_int(-6, 6), random.random_int(-6, 6)],
+      gitter: [random.random_int(-8, 8), random.random_int(-8, 8)],
     },
     gridPartitioning: {
       driftIndex: [random.random_choice([0, 1]), random.random_choice([0, 1])],
       driftCoefficient: [random.random_num(-0.1, 0.1), random.random_num(-0.1, 0.1)],
-      margin: 60,
-      gap: random.random_int(0, 20),
+      margin: 30,
+      gap: random.random_int(4, 20),
       // unitSize: [50, 50],
-      gridSizeInUnits: random.random_choice([[60, 60], [80, 80], [100, 100], [120, 120], [140, 140]]),
+      gridSizeInUnits: random.random_choice([[40, 40], [60, 60], [80, 80], [100, 100], [120, 120], [140, 140]]),
     },
   }
 }

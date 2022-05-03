@@ -1,5 +1,5 @@
 {
-  "name": "@pob-monorepo/art",
+  "name": "@artcode-monorepo/art",
   "version": "1.0.0",
   "source": "./src/index.html",
   "license": "MIT",

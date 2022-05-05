@@ -6,7 +6,6 @@ let hash = tokenData.hash ?? '0';
 let projectNumber = Math.floor(parseInt(tokenData.tokenId) / 1000000);
 let mintNumber = parseInt(tokenData.tokenId) % 1000000;
 
-console.log('hash', hash);
 const getDimension = () => Math.min(windowWidth, windowHeight);
 
 class Random {
@@ -62,6 +61,32 @@ class Random {
   random_choice(list) {
     return list[this.random_int(0, list.length - 1)];
   }
+  // random index by weight
+  random_by_weight(weights) {
+    var totalWeight = 0,
+    i,
+    random;
+
+    for (i = 0; i < weights.length; i++) {
+      totalWeight += weights[i];
+    }
+
+    random = this.random_dec() * totalWeight;
+
+    for (i = 0; i < weights.length; i++) {
+      if (random < weights[i]) {
+        return i;
+      }
+
+      random -= weights[i];
+    }
+
+    return -1;
+  }
+  // random choice by weights
+  random_choice_by_weight(list, weights) {
+    return list[this.random_by_weight(weights)];
+  }
 }
 
 const random = new Random(hash);
@@ -70,7 +95,7 @@ const PATTERN_WEIGHTS = [
   [0, 0.2, 0.4, 0.8, 1],
   [0, 0.25, 0.5, 0.75, 1],
   [0, 0.4, 0.8, 0.9, 1],
-  [0, 0.9, 1],
+  [0, 0.1, 0.4, 0.6, 0.9, 1],
 ];
 
 const COLORS = [
@@ -177,6 +202,7 @@ const COLORS = [
   ['#120136', '#035aa6', '#40bad5', '#fcbf1e'],
 ];
 
+const COLORS_LENGTH = COLORS.length;
 /**
  * PATTERNS
  */
@@ -191,7 +217,7 @@ const PATTERNS = {
     (index = 1) =>
     (ox, oy, w, h) => {
       PATTERNS.color(2)(ox, oy, w, h);
-    },
+  },
   plain: () => (ox, oy, w, h) => {
     rect(ox, oy, w, h);
   },
@@ -273,64 +299,66 @@ const PATTERNS = {
       PATTERNS.diagonalUp(gap)(ox, oy, w, h);
       PATTERNS.diagonalDown(gap)(ox, oy, w, h);
     },
-  crossHatchDown:
-    (gap = random.random_int(3, 9)) =>
-    (ox, oy, w, h) => {
-      PATTERNS.horzStripes(gap)(ox, oy, w, h);
-      PATTERNS.vertStripes(gap)(ox, oy, w, h);
-      // PATTERNS.diagonalUp(ox, oy, w, h)
-      PATTERNS.diagonalDown(gap)(ox, oy, w, h);
-    },
-  crossHatchUp:
-    (gap = random.random_int(3, 9)) =>
-    (ox, oy, w, h) => {
-      PATTERNS.horzStripes(gap)(ox, oy, w, h);
-      PATTERNS.vertStripes(gap)(ox, oy, w, h);
-      PATTERNS.diagonalUp(gap)(ox, oy, w, h);
-    },
 };
+
+const AVAILABLE_PATTERNS = ['color', 'color_2', 'plain', 'horzStripes', 'vertStripes', 'grid', 'diagonalUp', 'diagonalDown', 'diagonalGrid'];
 
 const generateGene = (seed) => {
   const patternWeights = random.random_choice(PATTERN_WEIGHTS);
-  // const pallete = randomInArray(colors);
-  const pallete = random.random_choice(COLORS);
-  const shuffledPalleteIndex = random.random_int(0, pallete.length - 1);
-  const shuffledPallete = [
-    ...pallete.slice(shuffledPalleteIndex),
-    ...pallete.slice(0, shuffledPalleteIndex),
-  ];
+  const palleteIndex = random.random_int(0, COLORS_LENGTH - 1);
+  const patternNames = patternWeights.map((_, i) =>
+      i === 0 ? 'color' : random.random_choice(AVAILABLE_PATTERNS)
+    ,
+  )
   return {
+    vertOrHorzRatio: random.random_dec(), 
     seed,
-    pallete: shuffledPallete,
-    patternWeights: patternWeights,
-    patterns: patternWeights.map((_, i) =>
-      PATTERNS[
-        i === 0 ? 'color' : random.random_choice(Object.keys(PATTERNS))
-      ](),
-    ),
+    palleteIndex,
+    patternWeights,
+    patternNames,
     gridLinesToRects: {
-      gitter: [random.random_int(-8, 8), random.random_int(-8, 8)],
+      gitter: [random.random_choice_by_weight([-8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8], [1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 2, 1]), random.random_choice_by_weight([-8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8], [1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 2, 1])],
     },
     gridPartitioning: {
       driftIndex: [random.random_choice([0, 1]), random.random_choice([0, 1])],
       driftCoefficient: [
-        random.random_num(-0.1, 0.1),
-        random.random_num(-0.1, 0.1),
+        random.random_num(-0.05, 0.05),
+        random.random_num(-0.05, 0.05),
       ],
-      margin: 30,
-      gap: random.random_int(4, 20),
+      margin: random.random_choice_by_weight([0, 30, 60, 90, 200], [0.01, 0.4, 0.3, 0.2, 0.09]),
+      gap: random.random_int(0, 20),
       // unitSize: [50, 50],
-      gridSizeInUnits: random.random_choice([
+      gridSizeInUnits: random.random_choice_by_weight([
+        [20, 20],
         [40, 40],
         [60, 60],
         [80, 80],
         [100, 100],
         [120, 120],
-        [140, 140],
-      ]),
+        [200, 200],
+      ], [0.1, 0.1, 0.2, 0.28 , 0.25, 0.05, 0.02]),
     },
   };
 };
+
+const getGeneForRendering = (gene) => {
+  const patternNames = gene.patternNames;
+  const pallete = COLORS[gene.palleteIndex];
+  const shuffledPalleteIndex = random.random_int(0, pallete.length - 1);
+  const shuffledPallete = [
+    ...pallete.slice(shuffledPalleteIndex),
+    ...pallete.slice(0, shuffledPalleteIndex),
+  ]; 
+  return {
+    ...gene,
+    pallete: shuffledPallete,
+    patterns: patternNames.map((n) =>
+    PATTERNS[
+      n
+    ](),
+  ),
+  }
+}
 
 const generateGridPartitioningInGridUnits = (
   topLeft,
@@ -447,9 +475,8 @@ const convertGridLinesToRects = (lines) => {
     });
 };
 
-const gene = generateGene(hash);
-
-console.log(gene);
+const gene = getGeneForRendering(generateGene(hash));
+console.log(gene, calculateFeatures(tokenData))
 function setup() {
   const dimension = getDimension();
   createCanvas(dimension, dimension);
@@ -470,6 +497,7 @@ function draw() {
   const lines = generateGridPartitioningInGridUnits(
     [0, 0],
     [gridSizeInUnits[0] - 1, gridSizeInUnits[1] - 1],
+    gene.vertOrHorzRatio,
   );
   const rects = convertGridLinesToRects(lines);
   // draw background

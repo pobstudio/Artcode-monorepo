@@ -6,7 +6,16 @@ let hash = tokenData.hash ?? '0';
 let projectNumber = Math.floor(parseInt(tokenData.tokenId) / 1000000);
 let mintNumber = parseInt(tokenData.tokenId) % 1000000;
 
-const getDimension = () => Math.min(windowWidth, windowHeight);
+const getDimension = () => 2000;
+
+const getCanvasDimension = () => Math.min(windowWidth, windowHeight);
+
+const scaleValue = (value) => {
+  const canvasDimension = getCanvasDimension();
+  const dimension = getDimension();
+  return value * canvasDimension / dimension;
+};
+
 
 class Random {
   constructor(hash) {
@@ -219,34 +228,35 @@ const PATTERNS = {
       PATTERNS.color(2)(ox, oy, w, h);
   },
   plain: () => (ox, oy, w, h) => {
+    fill('white');
     rect(ox, oy, w, h);
   },
   horzStripes:
-    (gap = random.random_int(3, 9)) =>
+    (gap = random.random_int(3, 16)) =>
     (ox, oy, w, h) => {
       stroke('black');
       const coeff = h > 0 ? 1 : -1;
-      for (let i = 0; i < Math.abs(h); i += gap) {
+      for (let i = 0; i < Math.abs(h); i += scaleValue(gap)) {
         line(ox, oy + coeff * i, ox + w, oy + coeff * i);
       }
     },
   vertStripes:
-    (gap = random.random_int(3, 9)) =>
+    (gap = random.random_int(3, 16)) =>
     (ox, oy, w, h) => {
       stroke('black');
       const coeff = w > 0 ? 1 : -1;
-      for (let i = 0; i < Math.abs(w); i += gap) {
+      for (let i = 0; i < Math.abs(w); i += scaleValue(gap)) {
         line(ox + coeff * i, oy, ox + coeff * i, oy + h);
       }
     },
   grid:
-    (gap = random.random_int(3, 9)) =>
+    (gap = random.random_int(3, 16)) =>
     (ox, oy, w, h) => {
       PATTERNS.horzStripes(gap)(ox, oy, w, h);
       PATTERNS.vertStripes(gap)(ox, oy, w, h);
     },
   diagonalUp:
-    (gap = random.random_int(3, 9)) =>
+    (gap = random.random_int(3, 16)) =>
     (ox, oy, w, h) => {
       push();
       fill('rgba(0,0,0,0)');
@@ -258,7 +268,7 @@ const PATTERNS = {
       for (
         let i = -normDimensions[0];
         i < normDimensions[0] + normDimensions[1];
-        i += gap
+        i += scaleValue(gap)
       ) {
         line(
           normTopLeft[0],
@@ -270,7 +280,7 @@ const PATTERNS = {
       pop();
     },
   diagonalDown:
-    (gap = random.random_int(3, 9)) =>
+    (gap = random.random_int(3, 16)) =>
     (ox, oy, w, h) => {
       push();
       fill('rgba(0,0,0,0)');
@@ -282,7 +292,7 @@ const PATTERNS = {
       for (
         let i = -normDimensions[0];
         i < normDimensions[0] + normDimensions[1];
-        i += gap
+        i += scaleValue(gap)
       ) {
         line(
           normTopLeft[0],
@@ -294,7 +304,7 @@ const PATTERNS = {
       pop();
     },
   diagonalGrid:
-    (gap = random.random_int(3, 9)) =>
+    (gap = random.random_int(3, 16)) =>
     (ox, oy, w, h) => {
       PATTERNS.diagonalUp(gap)(ox, oy, w, h);
       PATTERNS.diagonalDown(gap)(ox, oy, w, h);
@@ -325,7 +335,7 @@ const generateGene = (seed) => {
         random.random_num(-0.05, 0.05),
         random.random_num(-0.05, 0.05),
       ],
-      margin: random.random_choice_by_weight([0, 30, 60, 90, 200], [0.01, 0.4, 0.3, 0.2, 0.09]),
+      margin: random.random_choice_by_weight([0, 30, 90, 120, 300], [0.01, 0.4, 0.3, 0.2, 0.09]),
       gap: random.random_int(0, 20),
       // unitSize: [50, 50],
       gridSizeInUnits: random.random_choice_by_weight([
@@ -476,29 +486,30 @@ const convertGridLinesToRects = (lines) => {
 };
 
 const gene = getGeneForRendering(generateGene(hash));
-console.log(gene, calculateFeatures(tokenData))
+
+const lines = generateGridPartitioningInGridUnits(
+  [0, 0],
+  [gene.gridPartitioning.gridSizeInUnits[0] - 1, gene.gridPartitioning.gridSizeInUnits[1] - 1],
+  gene.vertOrHorzRatio,
+);
+
 function setup() {
-  const dimension = getDimension();
-  createCanvas(dimension, dimension);
+  const canvasDimension = getCanvasDimension();
+  createCanvas(canvasDimension, canvasDimension);
 
   noLoop();
 }
 
 function windowResized() {
-  const dimension = getDimension();
-  resizeCanvas(dimension, dimension);
+  const canvasDimension = getCanvasDimension();
+  resizeCanvas(canvasDimension, canvasDimension);
 }
 
 function draw() {
   const { pallete, patterns, patternWeights } = gene;
-  const { gridSizeInUnits, margin, driftCoefficient, driftIndex } =
+  const { margin, driftCoefficient, driftIndex } =
     gene.gridPartitioning;
   const dimension = getDimension();
-  const lines = generateGridPartitioningInGridUnits(
-    [0, 0],
-    [gridSizeInUnits[0] - 1, gridSizeInUnits[1] - 1],
-    gene.vertOrHorzRatio,
-  );
   const rects = convertGridLinesToRects(lines);
   // draw background
   background(pallete[0]);
@@ -512,15 +523,15 @@ function draw() {
     ];
     push();
     translate(
-      translateDelta[0] + translateDelta[driftIndex[0]] * driftCoefficient[0],
-      translateDelta[1] + translateDelta[driftIndex[1]] * driftCoefficient[1],
+      scaleValue(translateDelta[0] + translateDelta[driftIndex[0]] * driftCoefficient[0]),
+      scaleValue(translateDelta[1] + translateDelta[driftIndex[1]] * driftCoefficient[1]),
     );
     const rectParams = [
       -(r[1][0] - r[0][0] / 2),
       -(r[1][1] - r[0][1] / 2),
       r[1][0] - r[0][0],
       r[1][1] - r[0][1],
-    ];
+    ].map(scaleValue);
     // const rectParams = [...r[0], r[1][0] - r[0][0], r[1][1] - r[0][1]]
     // apply patterns
     const rawRatio = Math.abs(rectParams[2] / rectParams[3]);
@@ -544,11 +555,11 @@ function draw() {
   }
   // draw the frame
   resetMatrix();
-  strokeWeight(margin * 2);
+  strokeWeight(scaleValue(margin * 2));
   stroke(pallete[3]);
   fill('rgba(0,0,0,0)');
-  rect(0, 0, dimension, dimension);
-  strokeWeight(1);
+  rect(0, 0, scaleValue(dimension), scaleValue(dimension));
+  strokeWeight(scaleValue(1));
   stroke('black');
-  rect(margin, margin, dimension - margin * 2, dimension - margin * 2);
+  rect(scaleValue(margin), scaleValue(margin), scaleValue(dimension - margin * 2), scaleValue(dimension - margin * 2));
 }
